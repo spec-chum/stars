@@ -99,24 +99,24 @@ plot:       ld      (op), a         ; write OR b ($b0) or XOR b ($a8)
             ld      h, a
             
             ld      a, c
-            rra
-            rra
-            rra
+            rrca
+            rrca
+            rrca
             and     $18
             or      h
             or      $40
             ld      h, a
             
             ld      a, b
-            rra
-            rra
-            rra
+            rrca
+            rrca
+            rrca
             and     $1f
             ld      l, a
             
             ld      a, c
-            rla
-            rla
+            rlca
+            rlca
             and     $e0
             or      l
             ld      l, a
