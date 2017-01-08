@@ -2,7 +2,7 @@
 
             org 32768
 
-NUMSTARS    EQU 10
+NUMSTARS    EQU 50
 NUMLAYERS   EQU 4
 WRITE       EQU $b0
 ERASE       EQU $a8
@@ -21,16 +21,29 @@ start:      xor     a               ; set up and clear screen to black
             ld      (hl), a
             ldir
             
-            ld      b, NUMSTARS     ; loop counter
-            ld      ix, STARS
-
-firstloop:  push    bc
+init:       ld      b, NUMSTARS     ; loop counter
+            ld      ix, STARS       ; ix = speed, x, y
             
-            ld      e, (ix)         ; get speed
-            ld      b, (ix+1)       ; get x pos
-            ld      c, (ix+2)       ; get y pos            
-            ld      d, b            ; cache x pos
-                        
+firstloop:  push    bc
+
+layer:      call    rand
+            cp      NUMLAYERS-1
+            jr      nc, layer
+            inc     a               ; make sure speed isn't 0
+            ld      (ix), a         ; store speed
+            ld      e, a
+            
+            call    rand
+            ld      (ix+1), a       ; x can be any byte, so just store
+            ld      b, a
+            ld      d, a            ; cache x pos
+            
+ypos:       call    rand
+            cp      192
+            jr      nc, ypos
+            ld      (ix+2), a       ; store y
+            ld      c, a
+            
             ld      a, WRITE        ; select OR (write pixel)
             call    plot
  
@@ -127,16 +140,18 @@ op:         nop                     ; placeholder for OR or XOR
 
             ret
             
-STARS:      ;ds  NUMSTARS * 3       ; NUMSTARS * SPEED + STAR.Y + STAR.X
-            db      3, 145, 2
-            db      2, 56, 22
-            db      4, 178,42
-            db      2, 250, 62
-            db      1, 98, 82
-            db      2, 121, 102
-            db      3, 61, 122
-            db      4, 21, 142
-            db      3, 81, 162
-            db      3, 1, 182
+rand:       ld      hl, (seed)
+            ld      a, h
+            and     $1f             ; make sure we don't get RAM location
+            ld      h, a
+            ld      a, (hl)         ; put result in a
+            inc     hl
+            ld      (seed), hl
+            
+            ret
+            
+seed:       dw      0
+            
+STARS:      ds      NUMSTARS * 3    ; NUMSTARS * SPEED + STAR.X + STAR.Y
             
 end start
