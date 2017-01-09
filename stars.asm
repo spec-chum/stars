@@ -4,8 +4,6 @@
 
 NUMSTARS    EQU 50
 NUMLAYERS   EQU 4
-WRITE       EQU $b0
-ERASE       EQU $a8
 SCREEN      EQU $4000
 
 start:      xor     a               ; set up and clear screen to black
@@ -44,7 +42,6 @@ ypos:       call    rand
             ld      (ix+2), a       ; store y
             ld      c, a
             
-            ld      a, WRITE        ; select OR (write pixel)
             call    plot
  
             ld      a, d
@@ -68,14 +65,12 @@ mainloop:   push    bc
             ld      c, (ix+2)       ; get y pos            
             ld      d, b            ; cache x pos
                         
-            ld      a, WRITE        ; select OR (write pixel)
             call    plot
                         
             ld      a, d            ; reload x pos
             add     a, e            ; previous x pos
             ld      b, a            ; plot only clobbers b, so c is still y pos
             
-            ld      a, ERASE        ; select XOR (erase pixel)
             call    plot
 
             ld      a, d
@@ -93,8 +88,7 @@ mainloop:   push    bc
             
             jr      movestars 
             
-plot:       ld      (op), a         ; write OR b ($b0) or XOR b ($a8)
-            ld      a, c            ; IN: B = X, C = Y OUT: HL = address, A=offset
+plot:       ld      a, c            ; IN: B = X, C = Y OUT: HL = address, A=offset
             and     7
             ld      h, a
             
@@ -135,7 +129,7 @@ rotate:     rrca
             ld      b, a
             ld      a, (hl)
             
-op:         nop                     ; placeholder for OR or XOR
+op:         xor     b
             ld      (hl), a
 
             ret
