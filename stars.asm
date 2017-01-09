@@ -129,7 +129,7 @@ rotate:     rrca
             ld      b, a
             ld      a, (hl)
             
-op:         xor     b
+            xor     b
             ld      (hl), a
 
             ret
