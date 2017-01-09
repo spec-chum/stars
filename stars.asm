@@ -25,7 +25,7 @@ init:       ld      b, NUMSTARS     ; loop counter
 firstloop:  push    bc
 
 layer:      call    rand
-            cp      NUMLAYERS-1
+            cp      NUMLAYERS
             jr      nc, layer
             inc     a               ; make sure speed isn't 0
             ld      (ix), a         ; store speed
@@ -136,7 +136,7 @@ rotate:     rrca
             
 rand:       ld      hl, (seed)
             ld      a, h
-            and     $1f             ; make sure we don't get RAM location
+            and     $3f             ; make sure we don't get RAM location
             ld      h, a
             ld      a, (hl)         ; put result in a
             inc     hl
