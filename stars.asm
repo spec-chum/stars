@@ -7,7 +7,7 @@ NUMLAYERS   EQU 4
 SCREEN      EQU $4000
 
 start:      xor     a               ; set up and clear screen to black
-            out     ($fe), a
+            out     (254), a
             ld      hl, SCREEN
             ld      de, SCREEN+1
             ld      bc, 6144
@@ -18,6 +18,9 @@ start:      xor     a               ; set up and clear screen to black
             ld      a, 7            ; set PAPER 0 and INK 7
             ld      (hl), a
             ldir
+            
+            ld      hl, 23560       ; reset LAST-K to 0
+            ld      (hl), 0
             
 init:       ld      b, NUMSTARS     ; loop counter
             ld      ix, STARS       ; ix = speed, x, y
@@ -55,7 +58,10 @@ ypos:       call    rand
             pop     bc
             djnz    firstloop
                              
-movestars:  ld      b, NUMSTARS     ; loop counter
+movestars:  ld      a, 5            ; put border to cyan
+            out     (254), a        ; write to port 254
+            
+            ld      b, NUMSTARS     ; loop counter
             ld      ix, STARS
             
 mainloop:   push    bc
@@ -84,11 +90,19 @@ mainloop:   push    bc
             pop     bc
             djnz    mainloop
             
+            xor     a
+            out     (254), a
+            
             halt
             
-            jr      movestars 
+            ld      a, (23560)      ; test for keypress
+            or      a            
             
-plot:       ld      a, c            ; IN: B = X, C = Y OUT: HL = address, A=offset
+            jr      z, movestars    ; loop if no key pressed
+
+            ret                     ; return to BASIC        
+            
+plot:       ld      a, c            ; IN: B = X, C = Y OUT: HL = address
             and     7
             ld      h, a
             
@@ -124,8 +138,7 @@ plot:       ld      a, c            ; IN: B = X, C = Y OUT: HL = address, A=offs
             
 rotate:     rrca
             djnz    rotate
-            ld      b, 255
-            xor     b
+			cpl
             ld      b, a
             ld      a, (hl)
             
