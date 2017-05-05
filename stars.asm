@@ -10,13 +10,15 @@ start:		xor		a				; set up and clear screen to black
 			out		(254), a
 			ld		hl, SCREEN
 			ld		de, SCREEN+1
-			ld		bc, 6144
+			ld		bc, 6143
 			ld		(hl), a
 			ldir
 			
-			ld		bc, 768
+			ld		bc, 767
 			ld		a, 7			; set PAPER 0 and INK 7
-			ld		(hl), a
+			ld		(de), a
+			inc		hl
+			inc		de
 			ldir
 			
 			ld		hl, 23560		; reset LAST-K to 0
