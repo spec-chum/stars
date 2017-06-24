@@ -2,9 +2,12 @@
 
 			org 32768
 
-NUMSTARS	EQU 50
+DEBUG		EQU	0
+
+NUMSTARS	EQU 127
 NUMLAYERS	EQU 4
 SCREEN		EQU $4000
+LASTK		EQU	23560
 
 start:		xor		a				; set up and clear screen to black
 			out		(254), a
@@ -21,8 +24,14 @@ start:		xor		a				; set up and clear screen to black
 			inc		de
 			ldir
 			
-			ld		hl, 23560		; reset LAST-K to 0
-			ld		(hl), 0
+			ld		hl, LASTK		; reset LAST-K to 0
+			xor		a
+			ld		(hl), a			
+
+keyloop:	cp		(hl)
+			jr		z, keyloop
+			
+			ld		(hl), a
 			
 init:		ld		b, NUMSTARS		; loop counter
 			ld		ix, STARS		; ix = speed, x, y
@@ -60,8 +69,11 @@ ypos:		call	rand
 			pop		bc
 			djnz	firstloop
 							 
-movestars:	ld		a, 5			; put border to cyan
-			out		(254), a		; write to port 254
+movestars:	
+			IF DEBUG
+				ld		a, 5		; put border to cyan
+				out		(254), a	; write to port 254
+			ENDIF
 			
 			ld		b, NUMSTARS		; loop counter
 			ld		ix, STARS
@@ -92,65 +104,64 @@ mainloop:	push	bc
 			pop		bc
 			djnz	mainloop
 			
-			xor		a
-			out		(254), a
+			IF DEBUG
+				xor		a			; set border to black
+				out		(254), a	; write to port 254
+			ENDIF
 			
 			halt
 			
-			ld		a, (23560)		; test for keypress
+			ld		a, (LASTK)		; test for keypress
 			or		a			 
 			
 			jr		z, movestars	; loop if no key pressed
 
 			ret						; return to BASIC		 
+		
+plot:		ld		a, b			; use copy of x coord
+			rrca					; divide by 8
+			rrca
+			rrca
+			and		31				; mask rotated in bits
+			ld		h, a			; store in h
 			
-plot:		ld		a, c			; IN: B = X, C = Y OUT: HL = address
+			ld 		a, c			; get y
+			rla						; rotate y3 to y5 into position
+			rla
+			and 	224				; and isolate
+			or 		h				; merge x (copy)
+			ld 		l, a			; store in l
+			
+			ld 		a, c			; get y
+			rra						; rotate y7 and y6 into position-1
+			rra
+			or 		128				; bring in high bit
+			rra						; rotate y7 and y6 into position
+			xor 	c				; merge lower 3 bits of y for y0 to y2
+			and 	248
+			xor 	c
+			ld 		h, a			; store in h
+			
+			ld		a, b			; get pixel position
 			and		7
-			ld		h, a
+
+			exx						
+			ld		de, BITS
+			add		a, e
+			ld		e, a
+			ld		a, (de)
+			exx
 			
-			ld		a, c
-			rrca
-			rrca
-			rrca
-			and		$18
-			or		h
-			or		$40
-			ld		h, a
-			
-			ld		a, b
-			rrca
-			rrca
-			rrca
-			and		$1f
-			ld		l, a
-			
-			ld		a, c
-			rlca
-			rlca
-			and		$e0
-			or		l
-			ld		l, a
-			
-			ld		a, b
-			and		7
-				 
-			ld		b, a
-			inc		b
-			ld		a, 254
-			
-rotate:		rrca
-			djnz	rotate
-			cpl
-			ld		b, a
-			ld		a, (hl)
-			
-			xor		b
+			xor		(hl)
 			ld		(hl), a
 
 			ret
 			
+BITS:		db		128, 64, 32, 16, 8, 4, 2, 1
+
+			
 rand:		ld		hl, (seed)
-			ld		a, h
+			ld		a, r
 			and		$3f				; make sure we don't get RAM location
 			ld		h, a
 			ld		a, (hl)			; put result in a
