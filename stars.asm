@@ -2,12 +2,11 @@
 
 			org 32768
 
-DEBUG		EQU	0
+DEBUG		EQU	1
 
-NUMSTARS	EQU 127
+NUMSTARS	EQU 136
 NUMLAYERS	EQU 4
 SCREEN		EQU $4000
-LASTK		EQU	23560
 
 start:		xor		a				; set up and clear screen to black
 			out		(254), a
@@ -24,15 +23,6 @@ start:		xor		a				; set up and clear screen to black
 			inc		de
 			ldir
 			
-			ld		hl, LASTK		; reset LAST-K to 0
-			xor		a
-			ld		(hl), a			
-
-keyloop:	cp		(hl)
-			jr		z, keyloop
-			
-			ld		(hl), a
-			
 init:		ld		b, NUMSTARS		; loop counter
 			ld		ix, STARS		; ix = speed, x, y
 			
@@ -43,12 +33,10 @@ layer:		call	rand
 			jr		nc, layer
 			inc		a				; make sure speed isn't 0
 			ld		(ix), a			; store speed
-			ld		e, a
 			
 			call	rand
 			ld		(ix+1), a		; x can be any byte, so just store
 			ld		b, a
-			ld		d, a			; cache x pos
 			
 ypos:		call	rand
 			cp		192
@@ -57,10 +45,6 @@ ypos:		call	rand
 			ld		c, a
 			
 			call	plot
- 
-			ld		a, d
-			sub		e				; sub speed - looping back to 255 is fine
-			ld		(ix+1), a		; store new x pos
 		   
 			inc		ix
 			inc		ix
@@ -75,34 +59,27 @@ movestars:
 				out		(254), a	; write to port 254
 			ENDIF
 			
-			ld		b, NUMSTARS		; loop counter
+			ld		d, NUMSTARS
 			ld		ix, STARS
 			
-mainloop:	push	bc
-			
-			ld		e, (ix)			; get speed
-			ld		b, (ix+1)		; get x pos
+mainloop:	ld		b, (ix+1)		; get x pos
 			ld		c, (ix+2)		; get y pos			   
-			ld		d, b			; cache x pos
 						
 			call	plot
-						
-			ld		a, d			; reload x pos
-			add		a, e			; previous x pos
-			ld		b, a			; plot only clobbers b, so c is still y pos
+			
+			ld		a, b
+			sub		(ix)
+			ld		b, a
+			ld		(ix+1), a
 			
 			call	plot
-
-			ld		a, d
-			sub		e				; sub speed - looping back to 255 is fine
-			ld		(ix+1), a		; store new x pos
 		   
 			inc		ix
 			inc		ix
 			inc		ix
-
-			pop		bc
-			djnz	mainloop
+			
+			dec		d
+			jp		nz, mainloop
 			
 			IF DEBUG
 				xor		a			; set border to black
@@ -110,13 +87,8 @@ mainloop:	push	bc
 			ENDIF
 			
 			halt
-			
-			ld		a, (LASTK)		; test for keypress
-			or		a			 
-			
-			jr		z, movestars	; loop if no key pressed
 
-			ret						; return to BASIC		 
+			jp			movestars
 		
 plot:		ld		a, b			; use copy of x coord
 			rrca					; divide by 8
@@ -159,15 +131,29 @@ plot:		ld		a, b			; use copy of x coord
 			
 BITS:		db		128, 64, 32, 16, 8, 4, 2, 1
 
+rand:		ld		hl, $A280   	; yw -> zt
+			ld		de, $C0DE   	; xz -> yw
+			ld		(rand+4), hl  	; x = y,  z = w
 			
-rand:		ld		hl, (seed)
-			ld		a, r
-			and		$3f				; make sure we don't get RAM location
+			ld		a, l         	; w = w ^ ( w << 3 )
+			add		a, a
+			add		a, a
+			add		a, a
+			xor		l
+			ld		l, a
+			
+			ld		a, d         	; t = x ^ (x << 1)
+			add		a, a
+			xor		d
 			ld		h, a
-			ld		a, (hl)			; put result in a
-			inc		hl
-			ld		(seed), hl
+			rra             		; t = t ^ (t >> 1) ^ w
+			xor		h
+			xor		l
 			
+			ld		h, e         	; y = z
+			ld		l, a         	; w = t
+			ld		(rand+1), hl
+
 			ret
 			
 seed:		dw		0
