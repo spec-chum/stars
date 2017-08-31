@@ -4,7 +4,7 @@
 
 DEBUG		EQU	1
 
-NUMSTARS	EQU 206
+NUMSTARS	EQU 208
 NUMLAYERS	EQU 4
 SCREEN		EQU $4000
 
@@ -42,24 +42,23 @@ layer:		call	rand
 			ld		(ix+XPOS), a	; x can be any byte, so just store
 			rrca
 			rrca
-			rrca
-			and		%00011111
-			ld		b, a
+			rrca					; divide by 8 to get x byte
+			and		%00011111		; mask off rotated in bits
+			ld		b, a			; store for later
 			
-ypos:		call	rand
+ypos:		call	rand			; y must be < 192
 			cp		192
 			jr		nc, ypos
 			
-			ld		c, a
-			call	getY
+			call	getY			; get y address and store
 			ld		(ix+ADDR), l
 			ld		(ix+ADDR+1), h
 			
-			ld		a, l
+			ld		a, l			; add x byte
 			add		a, b
 			ld		l, a
 			
-			ld		a, (ix+XPOS)
+			ld		a, (ix+XPOS)	; get pixel from x pos
 			and		7
 			exx
 			ld		de, BITS
@@ -68,12 +67,10 @@ ypos:		call	rand
 			ld		a, (de)
 			exx
 			
-			ld		(hl), a
-
-			inc		ix
-			inc		ix
-			inc		ix			
-			inc		ix
+			ld		(hl), a			; plot to screen
+			
+			ld		bc, 4
+			add		ix, bc
 
 			pop		bc
 			djnz	firstloop
@@ -87,24 +84,24 @@ movestars:
 			ld		d, NUMSTARS
 			ld		ix, STARS
 			
-mainloop:	ld		l, (ix+ADDR)
+mainloop:	ld		l, (ix+ADDR)	; get y address
 			ld		h, (ix+ADDR+1)
 			
-			ld		a, (ix+XPOS)
-			ld		b, a
+			ld		a, (ix+XPOS)	; get x byte
+			ld		b, a			; and store
 			rrca
 			rrca
 			rrca
-			and		%00011111			
-			ld		c, a
+			and		%00011111		; 31		
+			ld		c, a			; store for later
 
-			add		a, l
+			add		a, l			; add x byte
 			ld		l, a
 			
-			ld		a, b
-			and		7
+			ld		a, b			; restore x byte
+			and		7				; get pixel pos
 			exx
-			ld		de, BITS
+			ld		e, LOW BITS
 			add		a, e
 			ld		e, a
 			ld		a, (de)
@@ -117,21 +114,21 @@ mainloop:	ld		l, (ix+ADDR)
 			sub		c
 			ld		l, a
 			
-			ld		a, b
-			sub		(ix+SPEED)
+			ld		a, b			; restore x byte
+			sub		(ix+SPEED)		; star.xpos -= speed
 			ld		(ix+XPOS), a
 			ld		b, a
+			rrca					; get x byte same as above
 			rrca
 			rrca
-			rrca
-			and		%00011111
+			and		%00011111		; 31
 			add		a, l
 			ld		l, a
 			
 			ld		a, b
 			and		7
 			exx
-			ld		e, BITS % 256
+			ld		e, LOW BITS
 			add		a, e
 			ld		e, a
 			ld		a, (de)
@@ -155,13 +152,13 @@ mainloop:	ld		l, (ix+ADDR)
 
 			jp			movestars
 
-getY:		ld 		a, c			; get y
+getY:		ld 		c, a			; store y
 			rla						; rotate y3 to y5 into position
 			rla
 			and 	224				; and isolate
 			ld 		l, a			; store in l
 			
-			ld 		a, c			; get y
+			ld 		a, c			; get y back
 			rra						; rotate y7 and y6 into position-1
 			rra
 			or 		128				; bring in high bit
